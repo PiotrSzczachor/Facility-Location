@@ -99,5 +99,5 @@ for line in data_list:
             customers.append(customer)
             print(customers)
 
-
+data.close()
 # print(distance(c1, f1))
