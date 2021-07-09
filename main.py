@@ -139,7 +139,9 @@ for i in range(0, facilities_amount):
         dist_array[i][j] = distance(facilities[i], customers[j])
 print(dist_array)
 
-tabu_list = []
+
+# Making first assignment which is assigning each customer to the closest facility
+# without checking it's open cost
 
 starting_assignment()
 for i in range(0, customers_amount):
