@@ -1,17 +1,46 @@
 from Customer import Customer
 from Facility import Facility
 import math
+import numpy as np
 
 
-def distance(customer, facility):
-    dist = math.dist(customer.location_, facility.location_)
+def calculating_cost():
+    cost = 0.0
+    for customer_ in customers:
+        cost += distance(customer_, customer_.assigned_facility)
+    for facility_ in facilities:
+        if facility_.is_open:
+            cost += facility_.buildCost
+    return cost
+
+
+def starting_assignment():
+    for customer_index in range(0, customers_amount):
+        min_distance = np.inf
+        min_index = -1
+        for facility_index in range(0, facilities_amount):
+            cond_1 = dist_array[facility_index][customer_index] < min_distance
+            cond_2 = customers[customer_index].demand <= facilities[facility_index].capacity
+            if cond_1 and cond_2:
+                min_index = facility_index
+                min_distance = dist_array[facility_index][customer_index]
+        facilities[min_index].facility_customers.append(customers[customer_index])
+        facilities[min_index].capacity -= customers[customer_index].demand
+        facilities[min_index].is_open = True
+        customers[customer_index].assigned_facility = facilities[min_index]
+
+
+def distance(customer_, facility_):
+    dist = math.dist(customer_.location, facility_.location)
     return dist
 
+
+# Reading input from file
 
 customers = []
 facilities = []
 
-data = open("data/fl_16_1", "r")
+data = open("data/fl_3_1", "r")
 data_list = data.readlines()
 
 facilities_amount = 0
@@ -35,6 +64,7 @@ print(data_list)
 print(facilities_amount)
 print(customers_amount)
 
+counter = 0
 j = 0
 for line in data_list:
     j += 1
@@ -71,8 +101,9 @@ for line in data_list:
                     location.append(location_y)
                     k += 1
             print(open_cost, cap, location)
-            facility = Facility(open_cost, cap, location)
+            facility = Facility(open_cost, cap, location, counter)
             facilities.append(facility)
+            counter += 1
             print(facilities)
         else:
             k = 0
@@ -98,6 +129,18 @@ for line in data_list:
             customer = Customer(demand, location)
             customers.append(customer)
             print(customers)
-
 data.close()
-# print(distance(c1, f1))
+
+# Making numpy array with with distance between facilities (rows) and customers (columns)
+
+dist_array = np.zeros((facilities_amount, customers_amount))
+for i in range(0, facilities_amount):
+    for j in range(0, customers_amount):
+        dist_array[i][j] = distance(facilities[i], customers[j])
+print(dist_array)
+
+tabu_list = []
+
+starting_assignment()
+for i in range(0, customers_amount):
+    print(customers[i].assigned_facility.index)

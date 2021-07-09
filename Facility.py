@@ -1,15 +1,9 @@
 class Facility:
-    def __init__(self, buildCost, capacity, location):
-        self.buildCost_ = buildCost
-        self.capacity_ = capacity
-        self.location_ = location
-
-    def location(self):
-        return self.location_
-
-    def capacity(self):
-        return self.capacity_
-
-    def buildCost(self):
-        return self.buildCost_
+    def __init__(self, buildCost_, capacity_, location_, index_):
+        self.buildCost = buildCost_
+        self.capacity = capacity_
+        self.location = location_
+        self.index = index_
+        self.facility_customers = []
+        self.is_open = False
 
