@@ -2,8 +2,19 @@ from Customer import Customer
 from Facility import Facility
 import math
 import numpy as np
+import random
 
 
+# Making numpy array with with distance between facilities (rows) and customers (columns)
+def np_distance_array():
+    array = np.zeros((facilities_amount, customers_amount))
+    for i in range(0, facilities_amount):
+        for j in range(0, customers_amount):
+            array[i][j] = distance(facilities[i], customers[j])
+    return array
+
+
+# Calculating whole cost of the solution
 def calculating_cost():
     cost = 0.0
     for customer_ in customers:
@@ -14,33 +25,122 @@ def calculating_cost():
     return cost
 
 
-def starting_assignment():
+# Assigning customer to the closest allowed facility without looking at it's open cost
+def greedy_assignment(not_allowed):
+    solution = []
+    for i in range(0, customers_amount):
+        solution.append(-1)
     for customer_index in range(0, customers_amount):
+        is_feasible = False
         min_distance = np.inf
         min_index = -1
         for facility_index in range(0, facilities_amount):
             cond_1 = dist_array[facility_index][customer_index] < min_distance
-            cond_2 = customers[customer_index].demand <= facilities[facility_index].capacity
-            if cond_1 and cond_2:
+            cond_2 = customers[customer_index].demand <= facilities[facility_index].free_capacity
+            cond_3 = facilities[facility_index] not in not_allowed
+            if cond_1 and cond_2 and cond_3:
                 min_index = facility_index
                 min_distance = dist_array[facility_index][customer_index]
+                is_feasible = True
+        # If we can't assign customer to any facility the solution is infeasible
+        if not is_feasible:
+            return np.inf, solution
         facilities[min_index].facility_customers.append(customers[customer_index])
-        facilities[min_index].capacity -= customers[customer_index].demand
+        facilities[min_index].free_capacity -= customers[customer_index].demand
         facilities[min_index].is_open = True
         customers[customer_index].assigned_facility = facilities[min_index]
+    for i in range(0, customers_amount):
+        solution[i] = customers[i].assigned_facility.index
+    objective = calculating_cost()
+    return objective, solution
 
 
+# Calculating distance between customer and facility
 def distance(customer_, facility_):
     dist = math.dist(customer_.location, facility_.location)
     return dist
 
 
-# Reading input from file
+# Making neighborhood
+def making_neighborhood():
+    neighbors = []
 
+    opened_facilities = []
+    closed_facilities = []
+    for i in range(0, facilities_amount):
+        if facilities[i].is_open:
+            opened_facilities.append(facilities[i])
+        else:
+            closed_facilities.append(facilities[i])
+
+    # Swap random facilities (closed and opened)
+    open_amount = len(opened_facilities)
+    close_amount = len(closed_facilities)
+    # We can swap only if there are some closed and opened facilities
+    if close_amount != 0 and open_amount != 0:
+        opened_index = random.randint(0, open_amount - 1)
+        closed_index = random.randint(0, close_amount - 1)
+        facility1 = opened_facilities[opened_index]
+        facility2 = closed_facilities[closed_index]
+        size = facility1.capacity-facility1.free_capacity
+        if size <= facility2.capacity:
+            facility1.is_open = False
+            facility2.is_open = True
+            facility2.facility_customers = facility1.facility_customers
+            for custom in facility1.facility_customers:
+                custom.assigned_facility = facility2
+            facility2.free_capacity = facility2.capacity - size
+            facility1.free_capacity = facility1.capacity
+            opened_facilities.remove(facility1)
+            closed_facilities.remove(facility2)
+            opened_facilities.append(facility2)
+            closed_facilities.append(facility1)
+        solution = []
+        for i in range(0, customers_amount):
+            solution.append(customers[i].assigned_facility.index)
+        cost = calculating_cost()
+        neighbors.append([cost, solution])
+
+    # Opening new facility
+    # To open new facility we need to have at least one facility closed
+    if len(closed_facilities) != 0:
+        closed_index = random.randint(0, len(closed_facilities) - 1)
+        facility1 = closed_facilities[closed_index]
+        facility1.is_open = True
+        closed_facilities.remove(facility1)
+        opened_facilities.append(facility1)
+        cost, solution = greedy_assignment([closed_facilities])
+        neighbors.append([cost, solution])
+
+    # Closing facility
+    # To close facility we need to have at least one facility opened
+    opened_index = random.randint(0, len(opened_facilities) - 1)
+    facility1 = opened_facilities[opened_index]
+    facility1.facility_customers = []
+    facility1.is_open = False
+    facility1.free_capacity = facility1.capacity
+    cost, solution = greedy_assignment(closed_facilities)
+    neighbors.append([cost, solution])
+
+
+# Tabu search
+def tabu_search(actually_solution, actually_objective):
+    number_of_iterations = 100
+    tabu_list = [actually_solution]
+    best_sollution = actually_solution
+    best_objectiove = actually_objective
+
+
+# Solving the problem
+def solve():
+    starting_cost, starting_solution = greedy_assignment([])
+
+
+# Reading input from file
 customers = []
 facilities = []
 
-data = open("data/fl_3_1", "r")
+data = open("data/fl_16_2", "r")
 data_list = data.readlines()
 
 facilities_amount = 0
@@ -87,7 +187,7 @@ for line in data_list:
                     tmp += line[k]
                     k += 1
                 if i == 0:
-                    open_cost = int(tmp)
+                    open_cost = float(tmp)
                     k += 1
                 if i == 1:
                     cap = int(tmp)
@@ -131,18 +231,6 @@ for line in data_list:
             print(customers)
 data.close()
 
-# Making numpy array with with distance between facilities (rows) and customers (columns)
-
-dist_array = np.zeros((facilities_amount, customers_amount))
-for i in range(0, facilities_amount):
-    for j in range(0, customers_amount):
-        dist_array[i][j] = distance(facilities[i], customers[j])
-print(dist_array)
-
-
-# Making first assignment which is assigning each customer to the closest facility
-# without checking it's open cost
-
-starting_assignment()
-for i in range(0, customers_amount):
-    print(customers[i].assigned_facility.index)
+dist_array = np_distance_array()
+making_neighborhood()
+print(greedy_assignment([]))

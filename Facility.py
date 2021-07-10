@@ -3,6 +3,7 @@ class Facility:
         self.buildCost = buildCost_
         self.capacity = capacity_
         self.location = location_
+        self.free_capacity = capacity_
         self.index = index_
         self.facility_customers = []
         self.is_open = False

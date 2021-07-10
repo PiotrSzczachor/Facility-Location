@@ -6,7 +6,7 @@ from main import distance
 customers = []
 facilities = []
 
-data = open("data/fl_3_1", "r")
+data = open("data/fl_16_2", "r")
 data_list = data.readlines()
 
 facilities_amount = 0
@@ -102,12 +102,7 @@ for i in range(0, facilities_amount):
 variables_x = []
 for i in range(0, facilities_amount):
     for j in range(0, customers_amount):
-        print("print i:")
-        print(i)
-        print("print j:")
-        print(j)
         number = str(i) + str(j)
-
         var = LpVariable(f"x{number}", cat="Binary")
         variables_x.append(var)
 
@@ -145,8 +140,17 @@ for i in range(0, facilities_amount):
     for j in range(0, customers_amount):
         suma += variables_x[counter]
         counter += 1
-    problem += suma <= facilities[i].capacity
+    problem += suma <= facilities[i].capacity * variables_y[i]
 
 
 for i in range(0, len(variables_x)):
     problem += variables_x[i] >= 0
+
+suma = 0
+for i in range(0, len(variables_y)):
+    suma += variables_y[i]
+problem += suma <= facilities_amount
+problem += suma >= 0
+
+
+print(problem.solve())
