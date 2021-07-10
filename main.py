@@ -64,7 +64,7 @@ def distance(customer_, facility_):
 # Making neighborhood
 def making_neighborhood():
     neighbors = []
-
+    number_of_operations = facilities_amount
     opened_facilities = []
     closed_facilities = []
     for i in range(0, facilities_amount):
@@ -73,74 +73,107 @@ def making_neighborhood():
         else:
             closed_facilities.append(facilities[i])
 
-    # Swap random facilities (closed and opened)
+    # Swapping random facilities (closed and opened)
     open_amount = len(opened_facilities)
     close_amount = len(closed_facilities)
     # We can swap only if there are some closed and opened facilities
-    if close_amount != 0 and open_amount != 0:
-        opened_index = random.randint(0, open_amount - 1)
-        closed_index = random.randint(0, close_amount - 1)
-        facility1 = opened_facilities[opened_index]
-        facility2 = closed_facilities[closed_index]
-        size = facility1.capacity-facility1.free_capacity
-        if size <= facility2.capacity:
-            facility1.is_open = False
-            facility2.is_open = True
-            facility2.facility_customers = facility1.facility_customers
-            for custom in facility1.facility_customers:
-                custom.assigned_facility = facility2
-            facility2.free_capacity = facility2.capacity - size
-            facility1.free_capacity = facility1.capacity
-            opened_facilities.remove(facility1)
-            closed_facilities.remove(facility2)
-            opened_facilities.append(facility2)
-            closed_facilities.append(facility1)
-        solution = []
-        for i in range(0, customers_amount):
-            solution.append(customers[i].assigned_facility.index)
-        cost = calculating_cost()
-        neighbors.append([cost, solution])
+    for i in range(0, number_of_operations):
+        if close_amount != 0 and open_amount != 0:
+            opened_index = random.randint(0, open_amount - 1)
+            closed_index = random.randint(0, close_amount - 1)
+            facility1 = opened_facilities[opened_index]
+            facility2 = closed_facilities[closed_index]
+            size = facility1.capacity-facility1.free_capacity
+            if size <= facility2.capacity:
+                facility1.is_open = False
+                facility2.is_open = True
+                facility2.facility_customers = facility1.facility_customers
+                for custom in facility1.facility_customers:
+                    custom.assigned_facility = facility2
+                facility2.free_capacity = facility2.capacity - size
+                facility1.free_capacity = facility1.capacity
+                opened_facilities.remove(facility1)
+                closed_facilities.remove(facility2)
+                opened_facilities.append(facility2)
+                closed_facilities.append(facility1)
+            solution = []
+            for i in range(0, customers_amount):
+                solution.append(customers[i].assigned_facility.index)
+            cost = calculating_cost()
+            neighbors.append([cost, solution])
 
-    # Opening new facility
+    # Opening new facilities
     # To open new facility we need to have at least one facility closed
-    if len(closed_facilities) != 0:
-        closed_index = random.randint(0, len(closed_facilities) - 1)
-        facility1 = closed_facilities[closed_index]
-        facility1.is_open = True
-        closed_facilities.remove(facility1)
-        opened_facilities.append(facility1)
-        cost, solution = greedy_assignment([closed_facilities])
-        neighbors.append([cost, solution])
+    for i in range(0, number_of_operations):
+        if len(closed_facilities) != 0:
+            closed_index = random.randint(0, len(closed_facilities) - 1)
+            facility1 = closed_facilities[closed_index]
+            facility1.is_open = True
+            closed_facilities.remove(facility1)
+            opened_facilities.append(facility1)
+            cost, solution = greedy_assignment([closed_facilities])
+            neighbors.append([cost, solution])
 
     # Closing facility
     # To close facility we need to have at least one facility opened
-    opened_index = random.randint(0, len(opened_facilities) - 1)
-    facility1 = opened_facilities[opened_index]
-    facility1.facility_customers = []
-    facility1.is_open = False
-    facility1.free_capacity = facility1.capacity
-    cost, solution = greedy_assignment(closed_facilities)
-    neighbors.append([cost, solution])
+    for i in range(0, number_of_operations):
+        if len(opened_facilities) != 0:
+            opened_index = random.randint(0, len(opened_facilities) - 1)
+            facility1 = opened_facilities[opened_index]
+            facility1.facility_customers = []
+            facility1.is_open = False
+            facility1.free_capacity = facility1.capacity
+            cost, solution = greedy_assignment(closed_facilities)
+            neighbors.append([cost, solution])
+
+    # Sorting neighbors list from lowest to highest cost
+    for i in range(0, len(neighbors)):
+        for j in range(0, len(neighbors) - 1):
+            if neighbors[j][0] > neighbors[j+1][0]:
+                tmp = neighbors[j][0]
+                neighbors[j][0] = neighbors[j+1][0]
+                neighbors[j+1][0] = tmp
+    print(neighbors)
+
+    return neighbors
 
 
 # Tabu search
-def tabu_search(actually_solution, actually_objective):
-    number_of_iterations = 100
+def tabu_search(actually_solution, actually_cost):
+    number_of_iterations = 10 * customers_amount
     tabu_list = [actually_solution]
+    curr_solution = actually_solution
+    curr_cost = actually_cost
     best_sollution = actually_solution
-    best_objectiove = actually_objective
+    best_cost = actually_cost
+    for i in range(0, number_of_iterations):
+        neighbors = making_neighborhood()
+        # Taking neighbor with smallest cost which is not in tabu list
+        for j in range(0, len(neighbors)):
+            if neighbors[j][1] not in tabu_list:
+                curr_cost = neighbors[j][0]
+                curr_solution = neighbors[j][1]
+                tabu_list.append(curr_solution)
+                break
+        if curr_cost < best_cost:
+            best_cost = curr_cost
+            best_sollution = curr_solution
+
+    return best_cost, best_sollution
 
 
 # Solving the problem
 def solve():
     starting_cost, starting_solution = greedy_assignment([])
-
+    cost, solution = tabu_search(starting_solution, starting_cost)
+    print(cost)
+    print(solution)
 
 # Reading input from file
 customers = []
 facilities = []
 
-data = open("data/fl_16_2", "r")
+data = open("data/fl_25_3", "r")
 data_list = data.readlines()
 
 facilities_amount = 0
@@ -160,9 +193,6 @@ for i in range(0, 2):
     else:
         customers_amount = int(tmp)
 
-print(data_list)
-print(facilities_amount)
-print(customers_amount)
 
 counter = 0
 j = 0
@@ -200,11 +230,9 @@ for line in data_list:
                     location.append(location_x)
                     location.append(location_y)
                     k += 1
-            print(open_cost, cap, location)
             facility = Facility(open_cost, cap, location, counter)
             facilities.append(facility)
             counter += 1
-            print(facilities)
         else:
             k = 0
             for i in range(0, 3):
@@ -225,12 +253,11 @@ for line in data_list:
                     location.append(location_x)
                     location.append(location_y)
                     k += 1
-            print(demand, location)
             customer = Customer(demand, location)
             customers.append(customer)
-            print(customers)
+
 data.close()
 
 dist_array = np_distance_array()
-making_neighborhood()
+solve()
 print(greedy_assignment([]))
