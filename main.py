@@ -77,8 +77,7 @@ def making_neighborhood():
     open_amount = len(opened_facilities)
     close_amount = len(closed_facilities)
     # We can swap only if there are some closed and opened facilities
-    multiplier = random.randint(1, 3)
-    for i in range(0, multiplier * number_of_operations):
+    for i in range(0, number_of_operations):
         if close_amount != 0 and open_amount != 0:
             opened_index = random.randint(0, open_amount - 1)
             closed_index = random.randint(0, close_amount - 1)
@@ -103,6 +102,32 @@ def making_neighborhood():
             cost = calculating_cost()
             neighbors.append([cost, solution])
 
+    for i in range(0, number_of_operations):
+
+        # Closing facility
+        # To close facility we need to have at least one facility opened
+        if len(opened_facilities) != 0:
+            opened_index = random.randint(0, len(opened_facilities) - 1)
+            facility1 = opened_facilities[opened_index]
+            for cust in facility1.facility_customers:
+                cust.assigned_facility = None
+            facility1.facility_customers = []
+            facility1.is_open = False
+            facility1.free_capacity = facility1.capacity
+            cost, solution = greedy_assignment(closed_facilities)
+            neighbors.append([cost, solution])
+
+        # Opening new facilities
+        # To open new facility we need to have at least one facility closed
+        if len(closed_facilities) != 0:
+            closed_index = random.randint(0, len(closed_facilities) - 1)
+            facility1 = closed_facilities[closed_index]
+            facility1.is_open = True
+            closed_facilities.remove(facility1)
+            opened_facilities.append(facility1)
+            cost, solution = greedy_assignment([closed_facilities])
+            neighbors.append([cost, solution])
+
     # Sorting neighbors list from lowest to highest cost
     for i in range(0, len(neighbors)):
         for j in range(0, len(neighbors) - 1):
@@ -110,7 +135,6 @@ def making_neighborhood():
                 tmp = neighbors[j][0]
                 neighbors[j][0] = neighbors[j + 1][0]
                 neighbors[j + 1][0] = tmp
-    # print(neighbors)
 
     return neighbors
 
@@ -151,7 +175,7 @@ def solve():
 customers = []
 facilities = []
 
-data = open("data/fl_16_1", "r")
+data = open("data/fl_100_4", "r")
 data_list = data.readlines()
 
 facilities_amount = 0
@@ -235,6 +259,7 @@ for line in data_list:
 
 data.close()
 
+# Making distance array and solving problem
 dist_array = np_distance_array()
 solve()
-# print(greedy_assignment([]))
+
